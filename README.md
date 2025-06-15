@@ -1,3 +1,7 @@
+
+# TR-Haber Botu
+Tam işlevsel bir yapay zeka haber özetleme ajanı
+
 # Türkçe 7/24 Otomatik Haber Özetleyici ve Seslendirici (AI News Agent)
 
 Bu proje, **hiçbir backend gerektirmeyen**, tamamen ücretsiz ve hızlı çalışan, GitHub Pages üzerinden yayınlanabilen bir Türkçe haber özetleme ve seslendirme uygulamasıdır. Sıfırdan kurulum ve kullanım için aşağıdaki adımları izleyin.
