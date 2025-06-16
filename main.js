@@ -1,29 +1,14 @@
-// Türkçe AI Haber Özetleyici & Seslendirici
-// Tüm mantık burada!
+// main.js - TR-NewsBot (Güncellenmiş sürüm)
 
-// 1. NewsAPI anahtarını buraya gir (kendi anahtarın veya örnek anahtar ile devam edebilirsin)
-const NEWS_API_KEY = "3f26e43147d34e7b975742c3657f1ff5"; // Değiştirilebilir
-
-// 2. Haberleri buradan çekiyoruz
-const NEWS_URL = `https://newsapi.org/v2/top-headlines?country=tr&pageSize=20&apiKey=${NEWS_API_KEY}`;
-
-// Alternatif:
-const PROXY = "https://corsproxy.io/?"; // Alternatif: https://api.allorigins.win/raw?url=
+// --- 1. Ayarlar ---
+const NEWS_API_KEY = "3f26e43147d34e7b975742c3657f1ff5"; // Mevcut NewsAPI anahtarın
+const PROXY = "https://corsproxy.io/?"; // CORS için geçici çözüm
 const NEWS_URL = `${PROXY}https://newsapi.org/v2/top-headlines?country=tr&pageSize=20&apiKey=${NEWS_API_KEY}`;
-
-
-// 3. Türkçe özetleme için HuggingFace Transformers.js veya örnek bir client-side özetleyici kullanılabilir
-//     (Burada örnek olarak basit bir özetleyici fonksiyon eklenmiştir. Daha iyisi için HuggingFace entegrasyonu README'de anlatıldı.)
-
-const SUMMARY_MAX_LENGTH = 240; // karakter
-
-// 4. Her haberin ekranda kalma süresi (saniye)
-const DISPLAY_TIME = 35;
-
-// 5. Haber/özete geçişteki kitap sayfası efekti için zaman (ms)
+const SUMMARY_MAX_LENGTH = 240;
+const DISPLAY_TIME = 35; // saniye
 const PAGE_TRANSITION_MS = 400;
 
-// --- DOM referansları ---
+// --- 2. DOM referansları ---
 const titleEl = document.getElementById('news-title');
 const summaryEl = document.getElementById('news-summary');
 const linkEl = document.getElementById('news-link');
@@ -35,14 +20,14 @@ let currentIdx = 0;
 let timer = null;
 let synth = window.speechSynthesis;
 
-// --- Ana akış başlar ---
+// --- 3. Başlangıç ---
 window.onload = async function() {
   showStatus("Haberler yükleniyor...");
   newsList = await fetchNews();
   if (!newsList.length) {
     showStatus("Hiç haber bulunamadı. API anahtarınızı veya bağlantınızı kontrol edin.");
-    titleEl.textContent = "Haber bulunamadı.";
-    summaryEl.textContent = "";
+    titleEl.textContent = "Haber alınamadı.";
+    summaryEl.textContent = "Sunucu, CORS veya API anahtarı hatası olabilir.";
     return;
   }
   showStatus("");
@@ -51,54 +36,53 @@ window.onload = async function() {
   startLoop();
 };
 
-// --- Haberleri NewsAPI'dan çek ---
-// 3. fetchNews fonksiyonunu gelişmiş hata yakalama ile güncelleme
+// --- 4. Haberleri API'dan çek ---
 async function fetchNews() {
   try {
     const resp = await fetch(NEWS_URL);
-    if (!resp.ok) throw new Error("API hatası!");
-    const data = await resp.json();
-    if (data.status !== "ok" || !data.articles) return [];
+    const text = await resp.text();
+    console.log("HAM YANIT:", text);
+    const data = JSON.parse(text);
+    if (data.status !== "ok" || !data.articles || data.articles.length === 0) {
+      throw new Error("NewsAPI 'ok' dönmedi veya haber yok.");
+    }
     return data.articles.filter(x => x.title && x.description);
   } catch (e) {
     showStatus("API bağlantı hatası: " + e.message);
+    titleEl.textContent = "Haber alınamadı.";
+    summaryEl.textContent = "Sunucu, CORS veya API anahtarı hatası olabilir.";
     return [];
   }
 }
 
-// --- Haber özetini hazırla (örnek: basit özetleme) ---
+// --- 5. Özetleme fonksiyonu ---
 async function summarizeText(text) {
-  // Basit kural: çok uzun cümleleri kısalt
   if (!text) return '';
   if (text.length <= SUMMARY_MAX_LENGTH) return text;
-  // Noktadan bölerek ilk 2 cümleyi al
   let sentences = text.split(/[.!?]/g).map(s => s.trim()).filter(Boolean);
   let summary = '';
   for (let s of sentences) {
     if ((summary + s).length > SUMMARY_MAX_LENGTH) break;
     summary += s + '. ';
   }
-  if (!summary) summary = text.slice(0, SUMMARY_MAX_LENGTH) + '...';
-  return summary.trim();
-  // Daha gelişmiş özet için HuggingFace Transformers.js entegrasyonu ekleyebilirsiniz.
+  return summary.trim() || text.slice(0, SUMMARY_MAX_LENGTH) + '...';
 }
 
-// --- Türkçe metni seslendir ---
+// --- 6. Sesli okuma ---
 function speakText(text) {
   if (!synth) return;
-  synth.cancel(); // O anda okunanı durdur
+  synth.cancel();
   let utter = new window.SpeechSynthesisUtterance(text);
   utter.lang = "tr-TR";
   utter.rate = 1.03;
   utter.pitch = 1;
   utter.volume = 1;
-  // Türkçe ses önceliği
   let voices = synth.getVoices().filter(v => v.lang.startsWith('tr'));
   if (voices.length) utter.voice = voices[0];
   synth.speak(utter);
 }
 
-// --- Haber ve özetini ekrana getir ---
+// --- 7. Haberi göster ---
 async function showNews(article) {
   titleEl.textContent = article.title;
   let summary = await summarizeText(article.description || article.content || article.title);
@@ -106,17 +90,14 @@ async function showNews(article) {
   linkEl.href = article.url || "#";
   linkEl.style.display = article.url ? "inline-block" : "none";
   linkEl.textContent = article.source?.name ? `Kaynak: ${article.source.name}` : "Haberi Kaynağında Oku";
-  // Seslendir
   speakText(summary);
-  // Progress bar sıfırla
   progressBar.style.width = "0%";
   animateProgressBar(DISPLAY_TIME);
 }
 
-// --- Sonraki habere geç ---
+// --- 8. Bir sonraki habere geç ---
 async function nextNews() {
   currentIdx = (currentIdx + 1) % newsList.length;
-  // Kitap sayfa efekti için
   summaryEl.parentElement.style.opacity = 0.2;
   setTimeout(() => {
     summaryEl.parentElement.style.opacity = 1;
@@ -124,7 +105,7 @@ async function nextNews() {
   }, PAGE_TRANSITION_MS);
 }
 
-// --- Sürekli döngü ---
+// --- 9. Otomatik döngü ---
 function startLoop() {
   clearTimeout(timer);
   timer = setTimeout(() => {
@@ -133,7 +114,7 @@ function startLoop() {
   }, DISPLAY_TIME * 1000);
 }
 
-// --- Progress bar animasyonu ---
+// --- 10. Progress bar animasyonu ---
 function animateProgressBar(seconds) {
   progressBar.style.transition = "none";
   progressBar.style.width = "0%";
@@ -143,23 +124,7 @@ function animateProgressBar(seconds) {
   }, 50);
 }
 
-// --- Durum mesajı göster ---
+// --- 11. Durum mesajı ---
 function showStatus(msg) {
   statusEl.textContent = msg || '';
 }
-
-// --- (Ekstra) Gelişmiş özetleme için örnek HuggingFace entegrasyonu: ---
-//   (Küçük Türkçe özet modeli için transformers.js ve model dosyası yüklemeniz gerekir.)
-//   README'de detaylı anlatılmıştır.
-
-// --- (Ekstra) RSS ve sosyal medya eklemek için örnek fonksiyonlar: ---
-/*
-async function fetchRSS(url) {
-  // RSS feed'den haber çekmek için (örneğin, rss2json.com veya ücretsiz bir proxy ile kullanılabilir)
-}
-async function fetchFromSocialMedia() {
-  // Instagram/Facebook/X için public API veya scraping ile çekilebilir (geliştirmeye açık)
-}
-*/
-
-// --- Kullanıcıdan başka bir şey istemez, her şey otomatik başlar! ---
