@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CORS Test – NewsAPI</title>
+  <style>
+    body {
+      background: #1e1e2f;
+      color: #e0e0e0;
+      font-family: monospace;
+      padding: 20px;
+    }
+    h2 {
+      color: #ffd700;
+    }
+    pre {
+      background: #2d2d44;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h2>NewsAPI CORS Testi (GitHub Pages)</h2>
+  <pre id="raw-result">Yükleniyor...</pre>
+  <script>
+    const TEST_API_KEY = "3f26e43147d34e7b975742c3657f1ff5";
+    const TEST_URL = `https://newsapi.org/v2/top-headlines?country=tr&pageSize=3&apiKey=${TEST_API_KEY}`;
+    const PROXY = "https://corsproxy.io/?";
+
+    window.onload = async function () {
+      const raw = document.getElementById("raw-result");
+      raw.innerText = "Yükleniyor...";
+      try {
+        const res = await fetch(PROXY + TEST_URL);
+        const text = await res.text();
+        raw.innerText = text;
+      } catch (err) {
+        raw.innerText = `HATA: ${err.message}`;
+      }
+    };
+  </script>
+</body>
+</html>
