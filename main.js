@@ -7,6 +7,11 @@ const NEWS_API_KEY = "3f26e43147d34e7b975742c3657f1ff5"; // Değiştirilebilir
 // 2. Haberleri buradan çekiyoruz
 const NEWS_URL = `https://newsapi.org/v2/top-headlines?country=tr&pageSize=20&apiKey=${NEWS_API_KEY}`;
 
+// Alternatif:
+const PROXY = "https://corsproxy.io/?"; // Alternatif: https://api.allorigins.win/raw?url=
+const NEWS_URL = `${PROXY}https://newsapi.org/v2/top-headlines?country=tr&pageSize=20&apiKey=${NEWS_API_KEY}`;
+
+
 // 3. Türkçe özetleme için HuggingFace Transformers.js veya örnek bir client-side özetleyici kullanılabilir
 //     (Burada örnek olarak basit bir özetleyici fonksiyon eklenmiştir. Daha iyisi için HuggingFace entegrasyonu README'de anlatıldı.)
 
@@ -47,6 +52,7 @@ window.onload = async function() {
 };
 
 // --- Haberleri NewsAPI'dan çek ---
+// 3. fetchNews fonksiyonunu gelişmiş hata yakalama ile güncelleme
 async function fetchNews() {
   try {
     const resp = await fetch(NEWS_URL);
